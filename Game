@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FM Simulatie: Nexus Plaza (Green Edition)</title>
+    <style>
+        :root {
+            /* Nieuwe huisstijlkleuren */
+            --primary: #8FBC8F; /* Dark Sea Green */
+            --primary-dark: #2F4F4F; /* Dark Slate Gray - voor tekst op groen */
+            --primary-light: #e8f5e9; /* Lichte achtergrond tint */
+            
+            --secondary: #6c757d;
+            --success: #2E8B57; /* Sea Green - iets donkerder voor contrast */
+            --danger: #CD5C5C; /* Indian Red - zachter rood */
+            --warning: #DAA520; /* Goldenrod */
+            --event-color: #DB7093; /* Pale Violet Red - voor events */
+            
+            --background: #f4f7f4; /* Heel licht groen-grijs */
+            --text: #212529;
+            --card-bg: #ffffff;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header & Dashboard */
+        header {
+            background-color: var(--primary);
+            color: var(--primary-dark); /* Donkere tekst voor contrast op lichte groen */
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 4px solid var(--primary-dark);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-right: 2rem;
+            font-weight: 700;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.4);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .stat-value {
+            font-weight: 800;
+            color: var(--primary-dark);
+        }
+
+        .stat-low { color: #b71c1c; } /* Donkerrood voor leesbaarheid */
+        .stat-high { color: #1b5e20; } /* Donkergroen */
+
+        /* Main Game Area */
+        main {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            border-top: 6px solid var(--primary);
+        }
+
+        /* Special style for Random Events */
+        .game-card.event-mode {
+            border-top: 6px solid var(--event-color);
+            background-color: #fffbfd;
+        }
+        
+        .game-card.event-mode .scenario-title {
+            color: var(--event-color);
+            border-bottom-color: #ffdce8;
+        }
+        
+        .game-card.event-mode .context-box {
+            border-left-color: var(--event-color);
+            background-color: #fff0f6;
+        }
+        
+        .game-card.event-mode .choice-btn:hover {
+            background-color: var(--event-color);
+            border-color: var(--event-color);
+            color: white;
+        }
+        
+        .game-card.event-mode .choice-btn {
+            border-color: var(--event-color);
+            color: var(--event-color);
+        }
+
+        .scenario-title {
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+            font-size: 1.35rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .scenario-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        
+        .event-mode .scenario-badge {
+            background: var(--event-color);
+            color: white;
+        }
+
+        .scenario-description {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            color: #444;
+        }
+
+        .context-box {
+            background-color: var(--primary-light);
+            padding: 1.25rem;
+            border-left: 5px solid var(--primary);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+            color: #333;
+        }
+
+        /* Choices */
+        .choices-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .choices-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .choice-btn {
+            background-color: white;
+            border: 2px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 1.25rem;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            font-weight: 500;
+        }
+
+        .choice-btn:hover, .choice-btn:focus {
+            background-color: var(--primary);
+            color: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(143, 188, 143, 0.4);
+            outline: none;
+            border-color: var(--primary-dark);
+        }
+        
+        .choice-btn:focus-visible {
+            outline: 3px solid var(--warning);
+            outline-offset: 2px;
+        }
+
+        /* Feedback Modal/Overlay */
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(47, 79, 79, 0.6); /* Primary dark with opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+
+        .feedback-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .feedback-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            border-top: 8px solid var(--secondary);
+        }
+
+        .feedback-title {
+            font-size: 1.6rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .feedback-title.good { color: var(--success); }
+        .feedback-title.mixed { color: var(--warning); }
+        .feedback-title.bad { color: var(--danger); }
+        .feedback-title.event { color: var(--event-color); }
+
+        #fb-text {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .impact-explanation {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid #eee;
+        }
+
+        .impact-explanation h4 {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #777;
+        }
+        
+        .impact-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+        }
+        .impact-row:last-child { border-bottom: none; }
+
+        .next-btn {
+            background-color: var(--primary);
+            color: var(--primary-dark);
+            padding: 0.8rem 2rem;
+            margin-top: 2rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border: 1px solid var(--primary-dark);
+        }
+
+        .next-btn:hover {
+            background-color: var(--primary-dark);
+            color: white;
+        }
+
+        /* Start & End Screens */
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .start-btn {
+            background-color: var(--success);
+            color: white;
+            padding: 1.2rem 2.5rem;
+            font-size: 1.3rem;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(46, 139, 87, 0.3);
+        }
+
+        .start-btn:hover {
+            background-color: #246d44;
+            transform: translateY(-2px);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            width: 100%;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Tag for impact */
+        .impact-delta {
+            font-weight: bold;
+        }
+        .delta-pos { color: var(--success); }
+        .delta-neg { color: var(--danger); }
+        .delta-neutral { color: #999; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <h1>Nexus Plaza FM</h1>
+            <div class="stats-bar" id="stats-bar" style="display:none;">
+                <div class="stat-item" title="Financiële gezondheid en ROI">
+                    💰 Budget: <span id="stat-budget" class="stat-value">100</span>%
+                </div>
+                <div class="stat-item" title="Tevredenheid van eindgebruikers">
+                    😊 Tevredenheid: <span id="stat-sat" class="stat-value">50</span>%
+                </div>
+                <div class="stat-item" title="Kwaliteit van data en besluitvorming">
+                    📊 Data Maturiteit: <span id="stat-data" class="stat-value">10</span>%
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Start Screen -->
+        <div id="start-screen" class="game-card screen active">
+            <h2 class="scenario-title">Nexus Plaza: The Data Challenge <span class="scenario-badge">Intro</span></h2>
+            <p class="scenario-description">
+                Welkom, Facility Manager. Je staat aan het roer van <strong>Nexus Plaza</strong>. 
+                De directie eist een transformatie naar <strong>Data-gedreven FM</strong>.
+            </p>
+            <div class="context-box">
+                <strong>Jouw Missie:</strong><br>
+                Maak keuzes gebaseerd op de 6 modules. Balanseer je <strong>Budget</strong>, <strong>Tevredenheid</strong> en <strong>Data</strong>.
+                <br><br>
+                <em>Let op: Elke keuze heeft consequenties. We leggen na elke stap uit waarom je scores veranderen.</em>
+            </div>
+            <button class="start-btn" onclick="game.start()">Start Simulatie</button>
+        </div>
+
+        <!-- Gameplay Screen -->
+        <div id="game-screen" class="game-card screen">
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <h2 class="scenario-title">
+                <span id="scenario-title">Scenario Titel</span>
+                <span id="scenario-badge" class="scenario-badge">Fase 1</span>
+            </h2>
+            <div id="scenario-context" class="context-box">Context info...</div>
+            <p id="scenario-text" class="scenario-description">Vraagstelling...</p>
+            
+            <div id="choices-container" class="choices-grid">
+                <!-- Buttons generated by JS -->
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" class="game-card screen">
+            <h2 class="scenario-title">Eindrapportage <span class="scenario-badge">Evaluatie</span></h2>
+            <p class="scenario-description" id="final-message">Je resultaat...</p>
+            
+            <div class="context-box">
+                <h3>Jouw Scorecard:</h3>
+                <div style="margin-top:1rem; display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    <div>💰 Budget Efficiëntie: <strong id="end-budget"></strong>%</div>
+                    <div>😊 Gebruikerstevredenheid: <strong id="end-sat"></strong>%</div>
+                    <div>📊 Data Volwassenheid: <strong id="end-data"></strong>%</div>
+                </div>
+            </div>
+            
+            <div id="learning-points" class="scenario-description" style="font-size: 0.95rem; color: #555;">
+                <!-- Dynamische leertips komen hier -->
+            </div>
+
+            <button class="next-btn" onclick="location.reload()">Opnieuw Spelen</button>
+        </div>
+    </main>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-overlay" class="feedback-overlay">
+        <div class="feedback-card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+            <h3 id="fb-title" class="feedback-title">Resultaat</h3>
+            <p id="fb-text">Uitleg...</p>
+            
+            <div class="impact-explanation">
+                <h4>Effect op KPI's:</h4>
+                <div class="impact-row">
+                    <span>💰 Budget</span>
+                    <span id="expl-budget" class="impact-delta"></span>
+                </div>
+                <div class="impact-row">
+                    <span>😊 Tevredenheid</span>
+                    <span id="expl-sat" class="impact-delta"></span>
+                </div>
+                <div class="impact-row">
+                    <span>📊 Data</span>
+                    <span id="expl-data" class="impact-delta"></span>
+                </div>
+                <div style="margin-top: 10px; font-style: italic; font-size: 0.9rem; color:#555;" id="expl-reason">
+                    Reden...
+                </div>
+            </div>
+
+            <button id="fb-next-btn" class="next-btn">Volgende Stap</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Game Logic & Content
+         */
+
+        const mainScenarios = [
+            {
+                id: 1,
+                module: "Module 2: Sturen",
+                title: "Fase 1: Strategische Koers",
+                context: "Het jaar begint. De directie wil kosten besparen, maar huurders klagen over de 'onzichtbare' facilitaire dienst.",
+                text: "Waar ga je dit jaar op sturen? Kies je strategie (Module 2).",
+                options: [
+                    {
+                        text: "Focus op kostenreductie (Financieel perspectief).",
+                        feedback: "Je bespaart direct geld, maar negeert de kwaliteit.",
+                        impact: { budget: 15, sat: -15, data: 0 },
+                        explanation: "Door te snijden in budgetten stijgt je financiële ruimte (+15%), maar de verschraling van service leidt direct tot klachten (-15%). Data verandert niet.",
+                        type: "bad"
+                    },
+                    {
+                        text: "Implementatie van een Balanced Scorecard.",
+                        feedback: "Sterk. Je zoekt balans tussen de 4 perspectieven.",
+                        impact: { budget: -5, sat: 10, data: 15 },
+                        explanation: "Implementatie kost tijd en geld (-5%), maar de structuur zorgt voor betere processen (+10% tevredenheid) en meetbaarheid (+15% data).",
+                        type: "good"
+                    },
+                    {
+                        text: "Focus op hospitality en klantbeleving.",
+                        feedback: "Huurders zijn blij, maar je budget raakt snel uitgeput.",
+                        impact: { budget: -20, sat: 20, data: 5 },
+                        explanation: "Luxe service is duur (-20%). Gebruikers zijn dolblij (+20%), maar zonder harde data (+5%) is dit lastig vol te houden.",
+                        type: "mixed"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                module: "Module 3: Dataverzameling",
+                title: "Fase 2: De Schoonmaak Puzzel",
+                context: "Er zijn klachten over vuile vergaderruimtes op de 3e etage. Schoonmakers volgen hun schema.",
+                text: "Hoe ga je data verzamelen om dit op te lossen? (Module 3)",
+                options: [
+                    {
+                        text: "Registratie via papieren logboeken door schoonmaakpersoneel.",
+                        feedback: "Goedkoop, maar foutgevoelig en traag.",
+                        impact: { budget: 0, sat: 5, data: 5 },
+                        explanation: "Kost bijna niks (0%), lost weinig op (+5% tevredenheid) en levert nauwelijks bruikbare digitale data op (+5%).",
+                        type: "mixed"
+                    },
+                    {
+                        text: "Gebruik van bestaande data uit Wifi-netwerk en toegangspoorten.",
+                        feedback: "Slim! Bestaande data hergebruiken.",
+                        impact: { budget: 5, sat: 10, data: 15 },
+                        explanation: "Je bespaart geld door geen nieuwe sensors te kopen (+5% budget). Inzicht in bezetting verbetert schoonmaak (+10%) en data (+15%).",
+                        type: "good"
+                    },
+                    {
+                        text: "Volledige implementatie van IoT-bewegingssensoren op elke werkplek.",
+                        feedback: "Technisch superieur, maar een grote investering als startpunt.",
+                        impact: { budget: -25, sat: 10, data: 20 },
+                        explanation: "Enorme investering (-25%). De data is zeer nauwkeurig (+20%), maar de kosten wegen nog niet op tegen de baten.",
+                        type: "bad"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                module: "Module 4: Implementatie",
+                title: "Fase 3: De Luchtbehandeling (LBK)",
+                context: "De LBK valt regelmatig uit. Reactief beheer werkt niet meer.",
+                text: "Hoe maak je de stap naar proactief beheer? (Module 4)",
+                options: [
+                    {
+                        text: "Predictive Maintenance: sensoren meten trillingen.",
+                        feedback: "Uitstekend. Je voorspelt storingen.",
+                        impact: { budget: -10, sat: 15, data: 25 },
+                        explanation: "Kost eerst geld (-10%), maar voorkomt uitval en koude klachten (+15%). Je bouwt waardevolle historische data op (+25%).",
+                        type: "good"
+                    },
+                    {
+                        text: "Preventief onderhoud intensiveren naar maandelijkse rondes.",
+                        feedback: "Dit is 'over-maintenance'.",
+                        impact: { budget: -20, sat: 5, data: 0 },
+                        explanation: "Extra monteurs kosten veel geld (-20%). Het voorkomt storingen ietsje (+5%), maar je leert niks over de installatie (0%).",
+                        type: "bad"
+                    },
+                    {
+                        text: "Onderhoud uitvoeren op basis van storingsmeldingen (Run-to-failure).",
+                        feedback: "Goedkoopst op korte termijn, maar desastreus voor continuïteit.",
+                        impact: { budget: 5, sat: -25, data: -5 },
+                        explanation: "Je spaart onderhoudskosten uit (+5%), maar boze huurders in de kou (-25%) kosten uiteindelijk meer.",
+                        type: "bad"
+                    }
+                ]
+            },
+            {
+                id: 4,
+                module: "Module 5: Visualisatie",
+                title: "Fase 4: Dashboarding",
+                context: "Het MT wil 'inzicht'. Je moet een dashboard opleveren.",
+                text: "Wat voor dashboard ontwerp je? (Module 5)",
+                options: [
+                    {
+                        text: "Compleet data-overzicht in spreadsheet formaat.",
+                        feedback: "Niemand leest dit. Data is geen informatie.",
+                        impact: { budget: 0, sat: -5, data: -5 },
+                        explanation: "Kost niks (0%), maar managers snappen het niet (-5% tevredenheid) en besluiten worden slechter (-5% data).",
+                        type: "bad"
+                    },
+                    {
+                        text: "Management by Exception (alleen afwijkingen tonen).",
+                        feedback: "Perfect. Je toont alleen wat aandacht nodig heeft.",
+                        impact: { budget: 5, sat: 5, data: 20 },
+                        explanation: "Bespaart zoektijd (+5% budget), geeft rust (+5% tevredenheid) en verhoogt de kwaliteit van besluitvorming (+20% data).",
+                        type: "good"
+                    },
+                    {
+                        text: "Uitgebreid real-time dashboard met alle beschikbare meters.",
+                        feedback: "Informatie-overload en focus op ijdelheid.",
+                        impact: { budget: -10, sat: 0, data: 10 },
+                        explanation: "Duur om te bouwen (-10%). Het ziet er profi uit (+10% data), maar leidt af van de echte problemen.",
+                        type: "mixed"
+                    }
+                ]
+            },
+            {
+                id: 5,
+                module: "Module 6: Business Case",
+                title: "Fase 5: Opschalen",
+                context: "Je wilt het hele pand 'smart' maken. Investering: €100.000.",
+                text: "Hoe verkoop je dit aan de CFO? (Module 6)",
+                options: [
+                    {
+                        text: "Focus op kwantificeerbare baten: energie & m2 besparing.",
+                        feedback: "Dit is de taal van de CFO.",
+                        impact: { budget: 20, sat: 5, data: 10 },
+                        explanation: "Business case goedgekeurd! De besparingen vloeien terug in je budget (+20%).",
+                        type: "good"
+                    },
+                    {
+                        text: "Nadruk op innovatie, uitstraling en voortrekkersrol.",
+                        feedback: "Niet overtuigend genoeg voor zo'n bedrag.",
+                        impact: { budget: 0, sat: 5, data: 0 },
+                        explanation: "Afgewezen. Geen budget erbij (0%). Wel een leuk idee (+5% tevredenheid team), maar geen strategische winst.",
+                        type: "bad"
+                    },
+                    {
+                        text: "Nadruk op risico van leegstand bij nietsdoen.",
+                        feedback: "Risicovol. Zonder data is het speculatie.",
+                        impact: { budget: -5, sat: -5, data: 0 },
+                        explanation: "CFO is kritisch (-5% budget ruimte), sfeer verslechtert omdat je geen harde cijfers hebt (-5% tevredenheid).",
+                        type: "mixed"
+                    }
+                ]
+            }
+        ];
+
+        // Random Events
+        const randomEvents = [
+            {
+                id: 'evt_privacy',
+                title: "⚠️ Incident: Privacy Zorgen",
+                context: "De OR slaat alarm. Medewerkers denken dat sensoren hun pauzes meten.",
+                text: "Dit is een uitdaging uit Module 6.2 (Weerstand). Wat doe je?",
+                options: [
+                    {
+                        text: "Verwijder direct alle sensoren.",
+                        feedback: "Conflict opgelost, data weg.",
+                        impact: { budget: -10, sat: 10, data: -20 },
+                        explanation: "Desinvestering kost geld (-10%). Medewerkers opgelucht (+10%), maar je bent blind (-20% data).",
+                        type: "bad"
+                    },
+                    {
+                        text: "Organiseer een sessie en leg anonimiteit uit.",
+                        feedback: "Goede change management!",
+                        impact: { budget: -5, sat: 15, data: 5 },
+                        explanation: "Kost tijd/geld (-5%), maar bouwt vertrouwen (+15%) en behoudt je datastroom (+5%).",
+                        type: "good"
+                    }
+                ]
+            },
+            {
+                id: 'evt_energy',
+                title: "⚠️ Incident: Energiecrisis",
+                context: "Energieprijzen verdubbelen vannacht.",
+                text: "Je moet bijsturen. Wat offer je op?",
+                options: [
+                    {
+                        text: "Verlaag de kantoortemperatuur met 2 graden.",
+                        feedback: "Budget gered, comfort weg.",
+                        impact: { budget: 15, sat: -20, data: 0 },
+                        explanation: "Enorme besparing (+15% budget), maar iedereen zit te rillen (-20% tevredenheid).",
+                        type: "mixed"
+                    },
+                    {
+                        text: "Behoud comfort, accepteer overschrijding.",
+                        feedback: "CFO woedend, gebruikers blij.",
+                        impact: { budget: -25, sat: 5, data: 0 },
+                        explanation: "Je blaast je budget op (-25%). Gebruikers merken niks (+5%), maar financieel sta je er slecht voor.",
+                        type: "bad"
+                    }
+                ]
+            },
+            {
+                id: 'evt_vendor',
+                title: "⚠️ Incident: Datakwaliteit",
+                context: "Schoonmaakleverancier stuurt ingescande PDF's.",
+                text: "Garbage in, garbage out. Wat doe je?",
+                options: [
+                    {
+                        text: "Handmatige verwerking van de PDF data.",
+                        feedback: "Tijdelijke oplossing, foutgevoelig.",
+                        impact: { budget: -5, sat: 0, data: 5 },
+                        explanation: "Kost manuren (-5%). Data is er wel (+5%), maar met vertraging en typfouten.",
+                        type: "mixed"
+                    },
+                    {
+                        text: "Eis een API-koppeling (Contractmanagement).",
+                        feedback: "Streng maar rechtvaardig.",
+                        impact: { budget: 0, sat: -5, data: 20 },
+                        explanation: "Leverancier moppert (-5% tevredenheid), maar je data is nu foutloos en real-time (+20%).",
+                        type: "good"
+                    }
+                ]
+            }
+        ];
+
+        const game = {
+            state: {
+                step: 0,
+                stats: { budget: 100, sat: 50, data: 10 },
+                eventQueue: [],
+                isEventActive: false
+            },
+            
+            init: function() {
+                this.state.eventQueue = [...randomEvents].sort(() => 0.5 - Math.random());
+            },
+
+            start: function() {
+                this.init();
+                document.getElementById('start-screen').classList.remove('active');
+                document.getElementById('game-screen').classList.add('active');
+                document.getElementById('stats-bar').style.display = 'flex';
+                this.updateUI();
+                this.loadScenario();
+            },
+
+            loadScenario: function() {
+                const gameCard = document.getElementById('game-screen');
+                const badge = document.getElementById('scenario-badge');
+                
+                let currentItem;
+                
+                if (!this.state.isEventActive && (this.state.step === 1 || this.state.step === 3) && Math.random() > 0.3) {
+                     this.state.isEventActive = true;
+                     currentItem = this.state.eventQueue.pop(); 
+                     
+                     gameCard.classList.add('event-mode');
+                     badge.innerText = "ONVERWACHT";
+                } else {
+                    this.state.isEventActive = false;
+                    currentItem = mainScenarios[this.state.step];
+                    
+                    gameCard.classList.remove('event-mode');
+                    badge.innerText = currentItem.module.split(':')[0];
+                }
+
+                if (!currentItem) {
+                    if (this.state.step >= mainScenarios.length) {
+                        this.endGame();
+                        return;
+                    }
+                    currentItem = mainScenarios[this.state.step];
+                }
+
+                document.getElementById('scenario-title').innerText = currentItem.title;
+                document.getElementById('scenario-context').innerText = currentItem.context;
+                document.getElementById('scenario-text').innerText = currentItem.text;
+                
+                if (!this.state.isEventActive) {
+                    const percentage = ((this.state.step) / mainScenarios.length) * 100;
+                    document.getElementById('progress-fill').style.width = percentage + '%';
+                }
+
+                const container = document.getElementById('choices-container');
+                container.innerHTML = '';
+                
+                currentItem.options.forEach((opt, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerHTML = `<strong>${String.fromCharCode(65 + index)}.</strong> &nbsp; ${opt.text}`;
+                    btn.onclick = () => this.makeChoice(opt);
+                    container.appendChild(btn);
+                });
+                
+                setTimeout(() => {
+                    const firstBtn = container.querySelector('button');
+                    if(firstBtn) firstBtn.focus();
+                }, 100);
+            },
+
+            makeChoice: function(option) {
+                this.state.stats.budget = Math.max(0, Math.min(100, this.state.stats.budget + option.impact.budget));
+                this.state.stats.sat = Math.max(0, Math.min(100, this.state.stats.sat + option.impact.sat));
+                this.state.stats.data = Math.max(0, Math.min(100, this.state.stats.data + option.impact.data));
+                
+                this.updateUI();
+                this.showFeedback(option);
+            },
+
+            showFeedback: function(option) {
+                const overlay = document.getElementById('feedback-overlay');
+                const title = document.getElementById('fb-title');
+                const text = document.getElementById('fb-text');
+                const reason = document.getElementById('expl-reason');
+                const nextBtn = document.getElementById('fb-next-btn');
+
+                if (this.state.isEventActive) {
+                    title.innerText = "Consequentie";
+                    title.className = "feedback-title event";
+                } else {
+                    title.innerText = option.type === 'good' ? "Sterke Keuze!" : (option.type === 'bad' ? "Oei, risicovol..." : "Keuze Gemaakt");
+                    title.className = `feedback-title ${option.type}`;
+                }
+                
+                text.innerText = option.feedback;
+                reason.innerText = option.explanation || "Geen extra toelichting.";
+                
+                // Helper func voor kleur van cijfers
+                const setExpl = (id, val) => {
+                    const el = document.getElementById(id);
+                    if(val > 0) { el.innerText = `+${val}%`; el.className = "impact-delta delta-pos"; }
+                    else if(val < 0) { el.innerText = `${val}%`; el.className = "impact-delta delta-neg"; }
+                    else { el.innerText = "0%"; el.className = "impact-delta delta-neutral"; }
+                };
+
+                setExpl('expl-budget', option.impact.budget);
+                setExpl('expl-sat', option.impact.sat);
+                setExpl('expl-data', option.impact.data);
+
+                overlay.classList.add('active');
+                nextBtn.focus();
+
+                nextBtn.onclick = () => {
+                    overlay.classList.remove('active');
+                    
+                    if (this.state.isEventActive) {
+                        this.state.isEventActive = false; 
+                    } else {
+                        this.state.step++;
+                    }
+
+                    if (this.state.step < mainScenarios.length) {
+                        this.loadScenario();
+                    } else {
+                        this.endGame();
+                    }
+                };
+            },
+
+            updateUI: function() {
+                const updateStat = (id, val) => {
+                    const el = document.getElementById(id);
+                    el.innerText = val;
+                    el.className = 'stat-value ' + (val < 30 ? 'stat-low' : (val > 80 ? 'stat-high' : ''));
+                };
+
+                updateStat('stat-budget', this.state.stats.budget);
+                updateStat('stat-sat', this.state.stats.sat);
+                updateStat('stat-data', this.state.stats.data);
+            },
+
+            endGame: function() {
+                document.getElementById('game-screen').classList.remove('active');
+                document.getElementById('end-screen').classList.add('active');
+
+                document.getElementById('end-budget').innerText = this.state.stats.budget;
+                document.getElementById('end-sat').innerText = this.state.stats.sat;
+                document.getElementById('end-data').innerText = this.state.stats.data;
+
+                const total = this.state.stats.budget + this.state.stats.sat + this.state.stats.data;
+                let msg = "";
+                let tips = [];
+
+                if (total > 230) {
+                    msg = "🏆 Uitstekend! Je hebt Nexus Plaza succesvol getransformeerd. Je hebt strategisch inzicht getoond.";
+                } else if (total > 180) {
+                    msg = "👍 Goed gedaan. De basis staat, maar let op de balans tussen kosten en kwaliteit.";
+                } else {
+                    msg = "⚠️ De transformatie is moeizaam verlopen. Probeer meer balans te vinden in de volgende poging.";
+                }
+
+                if (this.state.stats.budget < 40) tips.push("Tip: Let op je Budget. Innovatie moet wel betaalbaar blijven.");
+                if (this.state.stats.sat < 40) tips.push("Tip: Vergeet de Eindgebruiker niet. Data is een middel, geen doel.");
+                if (this.state.stats.data < 40) tips.push("Tip: Je Data Maturiteit is laag. Zonder betrouwbare data stuur je blind.");
+
+                document.getElementById('final-message').innerText = msg;
+                document.getElementById('learning-points').innerHTML = tips.map(t => `<p style="margin-bottom:0.5rem;">${t}</p>`).join("");
+            }
+        };
+
+    </script>
+</body>
+</html>
